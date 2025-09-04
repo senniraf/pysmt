@@ -55,20 +55,17 @@ class SizeOracle(walkers.DagWalker):
     def __init__(self, env=None):
         walkers.DagWalker.__init__(self, env=env)
 
-        self.measure_to_fun = \
-                        {SizeOracle.MEASURE_TREE_NODES: self.walk_count_tree,
-                         SizeOracle.MEASURE_DAG_NODES: self.walk_count_dag,
-                         SizeOracle.MEASURE_LEAVES: self.walk_count_leaves,
-                         SizeOracle.MEASURE_DEPTH: self.walk_count_depth,
-                         SizeOracle.MEASURE_SYMBOLS: self.walk_count_symbols,
-                         SizeOracle.MEASURE_BOOL_DAG: self.walk_count_bool_dag,
-                        }
+        # By default, count tree nodes
+        self._measure = SizeOracle.MEASURE_TREE_NODES
 
+    @property
+    def measure(self):
+        return self._measure
 
     def set_walking_measure(self, measure):
-        if measure not in self.measure_to_fun:
+        if measure not in SizeOracle._measure_to_fun:
             raise NotImplementedError
-        self.set_function(self.measure_to_fun[measure], *op.ALL_TYPES)
+        self._measure = measure
 
     def _get_key(self, formula, measure, **kwargs):
         """Memoize using a tuple (measure, formula)."""
@@ -79,12 +76,10 @@ class SizeOracle(walkers.DagWalker):
 
         The default measure is MEASURE_TREE_NODES.
         """
-        if measure is None:
-            # By default, count tree nodes
-            measure = SizeOracle.MEASURE_TREE_NODES
+        if measure is not None:
+            self.set_walking_measure(measure)
 
-        self.set_walking_measure(measure)
-        res = self.walk(formula, measure=measure)
+        res = self.walk(formula, measure=self.measure)
 
         if measure == SizeOracle.MEASURE_DAG_NODES or \
            measure == SizeOracle.MEASURE_SYMBOLS or \
@@ -92,25 +87,34 @@ class SizeOracle(walkers.DagWalker):
             return len(res)
         return res
 
-    def walk_count_tree(self, formula, args, **kwargs):
+    @walkers.handles(*op.ALL_TYPES)
+    def walk_all(self, formula, args, measure, **kwargs):
+        return SizeOracle._measure_to_fun[measure](formula, args, **kwargs)
+
+    @staticmethod
+    def count_tree(formula, args, **kwargs):
         #pylint: disable=unused-argument
         return 1 + sum(args)
 
-    def walk_count_dag(self, formula, args, measure, **kwargs):
+    @staticmethod
+    def count_dag(formula, args, **kwargs):
         #pylint: disable=unused-argument
         return frozenset([formula]) | frozenset([x for s in args for x in s])
 
-    def walk_count_leaves(self, formula, args, measure, **kwargs):
+    @staticmethod
+    def count_leaves(formula, args, **kwargs):
         #pylint: disable=unused-argument
         is_leaf = (len(args) == 0)
         return (1 if is_leaf else 0) + sum(args)
 
-    def walk_count_depth(self, formula, args, measure, **kwargs):
+    @staticmethod
+    def count_depth(formula, args, **kwargs):
         #pylint: disable=unused-argument
         is_leaf = (len(args) == 0)
         return 1 + (0 if is_leaf else max(args))
 
-    def walk_count_symbols(self, formula, args, measure, **kwargs):
+    @staticmethod
+    def count_symbols(formula, args, **kwargs):
         #pylint: disable=unused-argument
         is_sym = formula.is_symbol()
         a_res = frozenset([x for s in args for x in s])
@@ -118,11 +122,21 @@ class SizeOracle(walkers.DagWalker):
             return frozenset([formula]) | a_res
         return a_res
 
-    def walk_count_bool_dag(self, formula, args, measure, **kwargs):
+    @staticmethod
+    def count_bool_dag(formula, args, **kwargs):
         #pylint: disable=unused-argument
         if formula.is_theory_relation():
             return frozenset([formula])
         return frozenset([formula]) | frozenset([x for s in args for x in s])
+
+    _measure_to_fun = \
+                        {MEASURE_TREE_NODES: count_tree,
+                         MEASURE_DAG_NODES: count_dag,
+                         MEASURE_LEAVES: count_leaves,
+                         MEASURE_DEPTH: count_depth,
+                         MEASURE_SYMBOLS: count_symbols,
+                         MEASURE_BOOL_DAG: count_bool_dag,
+                        }
 
 
 class QuantifierOracle(walkers.DagWalker):
