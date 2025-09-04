@@ -27,6 +27,7 @@ from pysmt.formula import FormulaManager
 from pysmt.test.examples import get_example_formulae
 from pysmt.exceptions import UnsupportedOperatorError, PysmtTypeError
 from pysmt.substituter import MSSubstituter, MGSubstituter
+from pysmt.walkers.generic import handles
 
 
 class TestWalkers(TestCase):
@@ -110,16 +111,16 @@ class TestWalkers(TestCase):
 
     def test_identity_walker_simple(self):
 
-        def walk_and_to_or(formula, args, **kwargs):
-            return Or(args)
+        class AndToOrWalker(IdentityDagWalker):
+            @handles(op.AND)
+            def walk_and_to_or(self, formula, args, **kwargs):
+                return Or(args)
 
-        def walk_or_to_and(formula, args, **kwargs):
-            return And(args)
+            @handles(op.OR)
+            def walk_or_to_and(self, formula, args, **kwargs):
+                return And(args)
 
-        walker = IdentityDagWalker(env=get_env())
-
-        walker.set_function(walk_and_to_or, op.AND)
-        walker.set_function(walk_or_to_and, op.OR)
+        walker = AndToOrWalker(env=get_env())
 
         x, y, z = Symbol('x'), Symbol('y'), Symbol('z')
 
