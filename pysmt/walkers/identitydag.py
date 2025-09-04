@@ -26,7 +26,7 @@ class IdentityDagWalker(DagWalker):
 
     """
 
-    def __init__(self, env=None, invalidate_memoization=None):
+    def __init__(self, env=None, invalidate_memoization=False):
         DagWalker.__init__(self,
                            env=env,
                            invalidate_memoization=invalidate_memoization)

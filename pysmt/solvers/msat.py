@@ -37,6 +37,7 @@ from pysmt.exceptions import (SolverReturnedUnknownResultError,
 from pysmt.decorators import clear_pending_pop, catch_conversion_error
 from pysmt.solvers.qelim import QuantifierEliminator
 from pysmt.solvers.interpolation import Interpolator
+from pysmt.walkers.generic import handles
 from pysmt.walkers.identitydag import IdentityDagWalker
 
 class MSatEnv():
@@ -1127,8 +1128,6 @@ class MSatQuantifierEliminator(QuantifierEliminator, IdentityDagWalker):
         self.msat_env = MSATCreateEnv(self.__class__.__lib_name__, self.msat_config)
         self._msat_lib.msat_destroy_config(self.msat_config)
 
-        self.set_function(self.walk_identity, op.SYMBOL, op.REAL_CONSTANT,
-                          op.BOOL_CONSTANT, op.INT_CONSTANT)
         self.logic = logic
 
         self.algorithm = algorithm
@@ -1172,6 +1171,10 @@ class MSatQuantifierEliminator(QuantifierEliminator, IdentityDagWalker):
                   "elimination as the attribute 'expression' of this " \
                   "exception object" % str(res)), expression=res)
 
+    @handles(op.SYMBOL, op.REAL_CONSTANT, op.BOOL_CONSTANT,
+             op.INT_CONSTANT)
+    def walk_identity(self, formula, **kwargs):
+        return super().walk_identity(formula, **kwargs)
 
     def walk_forall(self, formula, args, **kwargs):
         assert formula.is_forall()
