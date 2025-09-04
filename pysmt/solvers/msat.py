@@ -1106,8 +1106,8 @@ class MSatQuantifierEliminator(QuantifierEliminator, IdentityDagWalker):
     def __init__(self, environment, logic=None, algorithm='lw'):
         """Initialize the Quantifier Eliminator using 'fm' or 'lw'.
 
-        fm: Fourier-Motzkin (default)
-        lw: Loos-Weisspfenning
+        fm: Fourier-Motzkin
+        lw: Loos-Weisspfenning (default)
         """
         if algorithm not in ['fm', 'lw']:
             raise PysmtValueError("Algorithm can be either 'fm' or 'lw'")
